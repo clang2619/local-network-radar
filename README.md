@@ -1,22 +1,53 @@
-# Local Network Radar 📡
+# 📡 Local Network Radar
 
-A Python-based Layer 2 network reconnaissance tool that maps active devices on a local subnet using Scapy and identifies hardware manufacturers via OUI API lookups.
+A lightweight, real-time Layer 2 network reconnaissance tool built in Python. It maps active devices across a local subnet using Address Resolution Protocol (ARP) broadcasting and resolves hardware manufacturers via IEEE OUI database queries.
 
-## Features
-* **Layer 2 Discovery:** Uses ARP frame broadcasts (`ff:ff:ff:ff:ff:ff`) to bypass host-level ICMP ping drops.
-* **Hardware Identification:** Queries the MAC Vendors REST API using the 3-byte Organizationally Unique Identifier (OUI).
-* **Caching Layer:** In-memory caching prevents redundant external API lookups for identical vendor prefixes.
-* **Terminal UI:** Formats live findings into an IP-sorted table using `rich`.
+---
 
-## Installation & Usage
+## 🛠️ Key Technical Features
 
-```bash
+* **Layer 2 Host Discovery:** Broadcasts raw Ethernet frames (`ff:ff:ff:ff:ff:ff`) to force replies from hosts that drop standard ICMP ping packets.
+* **OUI Vendor Resolution:** Extracts the first 3 bytes of detected MAC addresses to dynamically query the MAC Vendors API.
+* **In-Memory Caching:** Implements an internal lookup cache (`VENDOR_CACHE`) to eliminate redundant HTTP requests for identical hardware vendors.
+* **Telemetry Dashboard:** Formats discovered hosts into an IP-sorted terminal interface using `rich`.
+
+---
+
+## 📸 Output & Proof of Concept
+
+[Local Network Radar Dashboard](./radar_output.png)`
+
+---
+
+## 🧠 Engineering & Security Deep Dive
+
+### 1. Layer 2 (ARP) vs. Layer 3 (ICMP) Reconnaissance
+Standard network discovery tools frequently default to ICMP Echo Requests (pings). On modern operating systems (such as Windows with default firewall profiles), incoming ICMP traffic is silently dropped, rendering hosts invisible to Layer 3 scanners. 
+
+Because devices inside a broadcast domain must resolve IP addresses to physical MAC addresses to communicate across a local switch or access point, hosts cannot ignore Layer 2 ARP requests without losing connectivity. Local Network Radar utilizes Scapy's encapsulation operator (`/`) to build and inject raw Ethernet frames directly onto the wire:
+
+$$\text{Frame} = \text{Ether}(\text{dst}=\text{"ff:ff:ff:ff:ff:ff"}) \;/\; \text{ARP}(\text{pdst}=\text{"192.168.0.1/24"})$$
+
+### 2. MAC Address Randomization Analysis
+During local testing, several modern mobile devices returned `Unknown Vendor`. This occurs because modern mobile platforms (iOS, Android 10+) employ MAC address randomization for privacy:
+* In randomized MAC addresses, the IEEE-assigned Organizationally Unique Identifier (OUI) is discarded.
+* The locally administered bit (the second least-significant bit of the first byte) is set to `1` (identifiable by `x2:`, `x6:`, `xA:`, or `xE:` prefixes).
+* These randomized frames prevent tracking across public networks and deliberately break static vendor lookups.
+
+### 3. Socket Permissions
+Transmitting raw Ethernet frames on Windows requires administrative privileges and access to the Npcap packet capture driver.
+
+---
+
+## 🚀 Installation & Usage
+
+```powershell
+# Clone the repository
+git clone [https://github.com/clang2619/local-network-radar.git](https://github.com/clang2619/local-network-radar.git)
+cd local-network-radar
+
 # Install dependencies
 py -m pip install -r requirements.txt
 
-# Run scanner (requires elevated privileges on Windows for raw socket access)
+# Run scanner (Requires Administrator / elevated terminal)
 py radar.py
-```
-
-## Privacy & Security Note
-Modern mobile OS platforms (iOS, Android) default to MAC address randomization. Addresses showing randomized bits will report as "Unknown Vendor" because their locally administered OUIs do not exist in the IEEE hardware database.
