@@ -51,3 +51,22 @@ py -m pip install -r requirements.txt
 
 # Run scanner (Requires Administrator / elevated terminal)
 py radar.py
+
+---
+
+# 🔍 Multi-Threaded Service Banner Grabber (`grabber.py`)
+
+A concurrent TCP socket scanner designed to audit listening services and extract Application Layer (Layer 7) banners across discovered local assets.
+
+### Features
+* **Threaded Concurrency:** Leverages Python’s `concurrent.futures.ThreadPoolExecutor` to probe 20 target ports simultaneously, eliminating connection timeout latency.
+* **Protocol Probing:** Automatically issues `HEAD / HTTP/1.1` probes against web-associated ports to parse HTTP `Server:` response headers.
+* **Banner Extraction:** Captures service identification strings from standard administrative daemons (e.g., `lighttpd`, OpenSSH).
+
+### Usage
+```powershell
+# Run interactively
+py grabber.py
+
+# Or pass a target IP directly via CLI
+py grabber.py 192.168.0.1
